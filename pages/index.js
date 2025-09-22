@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { database } from '../lib/firebase';
 import { ref, push, onValue, serverTimestamp, set, remove, get } from 'firebase/database';
@@ -350,183 +349,284 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto font-sans px-4 py-6">
-      {}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 font-sans">
+      {/* Alert Component */}
       <CustomAlert
         type={alert.type}
         message={alert.message}
         onClose={() => setAlert({ type: '', message: '' })}
       />
 
-      {}
+      {/* Confirmation Modal */}
       <ConfirmModal />
 
-      {}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-lg overflow-hidden mb-6">
-        <div className="p-5 flex justify-between items-center">
-          <h1 className="text-3xl font-extrabold tracking-wide">Realtime Chat</h1>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className={`w-4 h-4 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-red-400'} animate-pulse`}></div>
-              <span className="text-sm font-medium capitalize">{connectionStatus}</span>
+      {/* Header */}
+      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold">Realtime Chat</h1>
             </div>
-            <button
-              onClick={testConnection}
-              className="px-4 py-2 bg-blue-500 rounded-md shadow hover:bg-blue-600 transition"
-            >
-              Test Connection
-            </button>
-            <button
-              onClick={clearMessages}
-              className="px-4 py-2 bg-red-500 rounded-md shadow hover:bg-red-600 transition"
-            >
-              Clear Messages
-            </button>
+            
+            <div className="flex flex-wrap gap-2 justify-center">
+              <div className="flex items-center space-x-2 bg-white/20 px-3 py-1 rounded-full">
+                <div className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-red-400'} animate-pulse`}></div>
+                <span className="text-sm font-medium capitalize">{connectionStatus}</span>
+              </div>
+              
+              <button
+                onClick={testConnection}
+                className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full text-sm transition flex items-center space-x-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Test Connection</span>
+              </button>
+              
+              <button
+                onClick={clearMessages}
+                className="bg-red-500/80 hover:bg-red-500 px-3 py-1 rounded-full text-sm transition flex items-center space-x-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Clear All</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {}
-      <div className="mb-4">
-        <label className="block mb-1 text-gray-700 dark:text-gray-300 font-semibold">Username:</label>
-        <input
-          type="text"
-          value={username}
-          onChange={handleUsernameChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-          placeholder="Enter your username"
-        />
-      </div>
-
-      {}
-      <div className="h-96 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg shadow-inner mb-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8 select-none">
-            No messages yet. Start a conversation!
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Username Input */}
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+          <label className="block mb-2 text-gray-700 dark:text-gray-300 font-semibold">Your Username:</label>
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={username}
+              onChange={handleUsernameChange}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+              placeholder="Enter your username"
+            />
+            <div className="flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-4 rounded-lg font-medium">
+              {username || "Not set"}
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.username === username ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-xs md:max-w-md px-4 py-2 rounded-lg shadow ${
-                    message.username === username
-                      ? 'bg-indigo-500 text-white rounded-br-none'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-none'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    {message.username !== username && (
-                      <div className="font-semibold text-sm">{message.username}</div>
-                    )}
+        </div>
+
+        {/* Chat Container */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-6">
+          {/* Messages Header */}
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+              Messages {messages.length > 0 && `(${messages.length})`}
+            </h2>
+            {cooldownTime > 0 && (
+              <div className="text-sm bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-3 py-1 rounded-full font-medium">
+                Cooldown: {cooldownTime}s
+              </div>
+            )}
+          </div>
+
+          {/* Messages Area */}
+          <div className="h-80 md:h-96 overflow-y-auto p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                <p className="text-center">No messages yet. Start a conversation!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.username === username ? 'justify-end' : 'justify-start'}`}
+                  >
                     <div
-                      className={`text-xs ${
+                      className={`max-w-xs md:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
                         message.username === username
-                          ? 'text-indigo-200'
-                          : 'text-gray-500 dark:text-gray-400'
-                      }`}
+                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-none'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-none'
+                      } relative`}
                     >
-                      {formatTime(message.timestamp)}
+                      {message.username !== username && (
+                        <div className="font-semibold text-sm mb-1 opacity-90">{message.username}</div>
+                      )}
+                      <div className="whitespace-pre-wrap break-words">{message.text}</div>
+                      <div
+                        className={`text-xs mt-1 ${
+                          message.username === username
+                            ? 'text-indigo-200'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        {formatTime(message.timestamp)}
+                      </div>
+                      
+                      {/* Message Actions */}
+                      <div className="absolute -bottom-5 right-0 flex space-x-2 opacity-0 hover:opacity-100 transition-opacity">
+                        {message.username !== username && (
+                          <button
+                            onClick={() => reportVirtex(message.id, message.username)}
+                            className="text-xs bg-red-500 text-white px-2 py-1 rounded-full hover:bg-red-600 transition"
+                            title="Report as spam"
+                          >
+                            Report
+                          </button>
+                        )}
+                        {message.username === username && (
+                          <button
+                            onClick={() => deleteMessage(message.id)}
+                            className="text-xs bg-gray-500 text-white px-2 py-1 rounded-full hover:bg-gray-600 transition"
+                            title="Delete message"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-1 whitespace-pre-wrap">{message.text}</div>
-                  <div className="mt-2 flex justify-end space-x-2">
-                    {message.username !== username && (
-                      <button
-                        onClick={() => reportVirtex(message.id, message.username)}
-                        className="text-xs text-red-500 hover:text-red-700 transition"
-                      >
-                        Report
-                      </button>
-                    )}
-                    {message.username === username && (
-                      <button
-                        onClick={() => deleteMessage(message.id)}
-                        className="text-xs text-gray-500 hover:text-gray-700 transition"
-                      >
-                        Delete
-                      </button>
-                    )}
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Message Input */}
+          <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+            <form onSubmit={handleSendMessage}>
+              <div className="mb-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                <div>
+                  {newMessage.length}/{MAX_MESSAGE_LENGTH} characters
+                </div>
+                <div className={newMessage.length > MAX_MESSAGE_LENGTH * 0.8 ? 'text-orange-500' : ''}>
+                  {Math.round((newMessage.length / MAX_MESSAGE_LENGTH) * 100)}%
+                </div>
+              </div>
+              
+              <div className="flex space-x-2">
+                <div className="flex-1 relative">
+                  <textarea
+                    value={newMessage}
+                    onChange={handleMessageChange}
+                    placeholder="Type your message here..."
+                    rows={2}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none transition pr-20"
+                  />
+                  <div className="absolute right-2 bottom-2">
+                    <button
+                      type="submit"
+                      disabled={cooldownTime > 0 || newMessage.trim() === ''}
+                      className={`px-4 py-2 rounded-lg font-medium ${
+                        cooldownTime > 0 || newMessage.trim() === ''
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition shadow-md'
+                      } text-white flex items-center space-x-1`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      <span>Send</span>
+                    </button>
                   </div>
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
+            </form>
           </div>
-        )}
-      </div>
-
-      {}
-      <form onSubmit={handleSendMessage} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="mb-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
-          <div>
-            Characters: {newMessage.length}/{MAX_MESSAGE_LENGTH}
-          </div>
-          {cooldownTime > 0 && (
-            <div className="text-orange-500 font-semibold">
-              Please wait {cooldownTime}s before sending another message
-            </div>
-          )}
         </div>
-        <div className="flex">
-          <textarea
-            value={newMessage}
-            onChange={handleMessageChange}
-            placeholder="Type a message..."
-            rows={2}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none transition"
-          />
-          <button
-            type="submit"
-            disabled={cooldownTime > 0 || newMessage.trim() === ''}
-            className={`px-4 py-2 rounded-r-lg ${
-              cooldownTime > 0 || newMessage.trim() === ''
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition'
-            } text-white`}
-          >
-            Send
-          </button>
-        </div>
-      </form>
 
-      {}
-      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm shadow-inner">
-        <h3 className="font-bold mb-2">Database Info</h3>
-        {databaseInfo ? (
-          <div>
-            <p>
-              Status:{' '}
-              <span className={databaseInfo.status === 'connected' ? 'text-green-500' : 'text-red-500'}>
-                {databaseInfo.status}
-              </span>
-            </p>
-            {databaseInfo.serverTimeOffset !== undefined && (
-              <p>Server Time Offset: {databaseInfo.serverTimeOffset} ms</p>
+        {/* Info Panels */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Database Info */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-700 dark:text-gray-300 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+              </svg>
+              Database Status
+            </h3>
+            {databaseInfo ? (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span className={databaseInfo.status === 'connected' ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>
+                    {databaseInfo.status}
+                  </span>
+                </div>
+                {databaseInfo.serverTimeOffset !== undefined && (
+                  <div className="flex justify-between">
+                    <span>Time Offset:</span>
+                    <span>{databaseInfo.serverTimeOffset} ms</span>
+                  </div>
+                )}
+                {databaseInfo.message && (
+                  <div className="flex justify-between">
+                    <span>Error:</span>
+                    <span className="text-red-500 text-xs">{databaseInfo.message}</span>
+                  </div>
+                )}
+                {databaseInfo.lastTest && (
+                  <div className="flex justify-between">
+                    <span>Last Test:</span>
+                    <span>{databaseInfo.lastTest}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400">Loading database info...</p>
             )}
-            {databaseInfo.message && <p>Error: {databaseInfo.message}</p>}
-            {databaseInfo.lastTest && <p>Last Test: {databaseInfo.lastTest}</p>}
           </div>
-        ) : (
-          <p>Loading database info...</p>
-        )}
-      </div>
 
-      {}
-      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm shadow-inner">
-        <h3 className="font-bold mb-2">Debug Info:</h3>
-        <p>Connection Status: {connectionStatus}</p>
-        <p>Messages Count: {messages.length}</p>
-        <p>Username: {username}</p>
-        <p>Is Client: {isClient ? 'Yes' : 'No'}</p>
-        <p>Last Message Time: {lastMessageTime ? new Date(lastMessageTime).toLocaleTimeString() : 'Never'}</p>
-        <p>Cooldown Time: {cooldownTime}s</p>
-        {error && <p className="text-red-500">Error: {error}</p>}
-      </div>
+          {/* Debug Info */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-700 dark:text-gray-300 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+              Connection Info
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Connection:</span>
+                <span className="capitalize">{connectionStatus}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Messages:</span>
+                <span>{messages.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Username:</span>
+                <span className="truncate max-w-[120px]">{username || 'Not set'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Last Message:</span>
+                <span>{lastMessageTime ? new Date(lastMessageTime).toLocaleTimeString() : 'Never'}</span>
+              </div>
+              {error && (
+                <div className="flex justify-between">
+                  <span>Error:</span>
+                  <span className="text-red-500 truncate max-w-[150px]">{error}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-8 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+        <p>Realtime Chat App • Built with React & Firebase</p>
+      </footer>
     </div>
   );
-              }
-                  
+                              }
