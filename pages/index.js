@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { database } from '../lib/firebase';
-import { ref, push, onValue, serverTimestamp, set, remove } from 'firebase/database';
+import { ref, push, onValue, serverTimestamp, set, remove, get } from 'firebase/database';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -12,6 +12,7 @@ export default function Home() {
   const [lastMessageTime, setLastMessageTime] = useState(0);
   const [cooldownTime, setCooldownTime] = useState(0);
   const [systemNotifications, setSystemNotifications] = useState([]);
+  const [databaseInfo, setDatabaseInfo] = useState(null);
   const messagesEndRef = useRef(null);
   
   // Constants for message limits
@@ -22,19 +23,54 @@ export default function Home() {
   // Set isClient to true when component mounts on client
   useEffect(() => {
     setIsClient(true);
+    console.log("Component mounted on client side");
     
     // Get username from localStorage or prompt user
     const savedUsername = localStorage.getItem('chatUsername');
     if (savedUsername) {
       setUsername(savedUsername);
+      console.log("Username loaded from localStorage:", savedUsername);
     } else {
       const name = prompt('Enter your username:');
       if (name) {
         setUsername(name);
         localStorage.setItem('chatUsername', name);
+        console.log("New username set:", name);
       }
     }
   }, []);
+
+  // Test database connection
+  useEffect(() => {
+    if (!isClient) return;
+    
+    console.log("Testing database connection...");
+    
+    // Test database connection by trying to read server time offset
+    const testRef = ref(database, '.info/serverTimeOffset');
+    
+    get(testRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        console.log("Database connection test successful");
+        setDatabaseInfo({
+          status: "connected",
+          serverTimeOffset: snapshot.val()
+        });
+      } else {
+        console.error("Database connection test failed: No data returned");
+        setDatabaseInfo({
+          status: "error",
+          message: "No data returned from database"
+        });
+      }
+    }).catch((error) => {
+      console.error("Database connection test failed:", error);
+      setDatabaseInfo({
+        status: "error",
+        message: error.message
+      });
+    });
+  }, [isClient, database]);
 
   // Update cooldown timer
   useEffect(() => {
@@ -69,30 +105,25 @@ export default function Home() {
     // Only run on client side
     if (!isClient) return;
 
+    console.log("Setting up Firebase listeners...");
+    
     // Check connection status
     const connectedRef = ref(database, '.info/connected');
     const unsubscribeConnected = onValue(connectedRef, (snapshot) => {
       const connected = snapshot.val();
       setConnectionStatus(connected ? 'connected' : 'disconnected');
-      console.log("Firebase connection status:", connected ? "Connected" : "Disconnected");
-    });
-
-    // Create a test connection to verify database access
-    const testRef = ref(database, '.info/serverTimeOffset');
-    const unsubscribeTest = onValue(testRef, (snapshot) => {
-      console.log("Database connection test successful");
-    }, (error) => {
-      console.error("Database connection test failed:", error);
-      setError(`Database connection error: ${error.message}`);
+      console.log("Firebase connection status changed:", connected ? "Connected" : "Disconnected");
     });
 
     // Fetch messages from Firebase
     const messagesRef = ref(database, 'messages');
     const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
-      const data = snapshot.val();
-      console.log("Firebase data received:", data);
+      console.log("Messages data received from Firebase");
       
-      if (data) {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        console.log("Messages data:", data);
+        
         // Convert object to array and sort by timestamp
         const messageList = Object.entries(data).map(([key, value]) => ({
           id: key,
@@ -105,10 +136,10 @@ export default function Home() {
         });
         
         setMessages(messageList);
-        console.log("Messages updated:", messageList);
+        console.log("Messages updated:", messageList.length, "messages");
       } else {
+        console.log("No messages found in database");
         setMessages([]);
-        console.log("No messages found");
       }
     }, (error) => {
       console.error("Error fetching messages:", error);
@@ -117,17 +148,20 @@ export default function Home() {
 
     return () => {
       // Cleanup subscriptions
+      console.log("Cleaning up Firebase listeners");
       unsubscribeConnected();
-      unsubscribeTest();
       unsubscribeMessages();
     };
-  }, [isClient]);
+  }, [isClient, database]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     
     // Check if message is empty
-    if (newMessage.trim() === '' || username.trim() === '') return;
+    if (newMessage.trim() === '' || username.trim() === '') {
+      console.log("Empty message or username");
+      return;
+    }
     
     // Check if message is too long
     if (newMessage.length > MAX_MESSAGE_LENGTH) {
@@ -243,6 +277,42 @@ export default function Home() {
     }
   };
 
+  const testConnection = () => {
+    console.log("Manual connection test initiated");
+    setConnectionStatus('connecting');
+    
+    // Test database connection by trying to read server time offset
+    const testRef = ref(database, '.info/serverTimeOffset');
+    
+    get(testRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        console.log("Manual connection test successful");
+        setConnectionStatus('connected');
+        setDatabaseInfo({
+          status: "connected",
+          serverTimeOffset: snapshot.val(),
+          lastTest: new Date().toLocaleTimeString()
+        });
+      } else {
+        console.error("Manual connection test failed: No data returned");
+        setConnectionStatus('disconnected');
+        setDatabaseInfo({
+          status: "error",
+          message: "No data returned from database",
+          lastTest: new Date().toLocaleTimeString()
+        });
+      }
+    }).catch((error) => {
+      console.error("Manual connection test failed:", error);
+      setConnectionStatus('disconnected');
+      setDatabaseInfo({
+        status: "error",
+        message: error.message,
+        lastTest: new Date().toLocaleTimeString()
+      });
+    });
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
@@ -253,6 +323,12 @@ export default function Home() {
               <div className={`w-3 h-3 rounded-full mr-2 ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-red-400'}`}></div>
               <span className="text-sm">{connectionStatus}</span>
             </div>
+            <button 
+              onClick={testConnection}
+              className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+            >
+              Test Connection
+            </button>
             <button 
               onClick={clearMessages}
               className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
@@ -384,6 +460,21 @@ export default function Home() {
         </form>
       </div>
       
+      {/* Database Info */}
+      <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">
+        <h3 className="font-bold mb-2">Database Info</h3>
+        {databaseInfo ? (
+          <div>
+            <p>Status: <span className={databaseInfo.status === 'connected' ? 'text-green-500' : 'text-red-500'}>{databaseInfo.status}</span></p>
+            {databaseInfo.serverTimeOffset && <p>Server Time Offset: {databaseInfo.serverTimeOffset}ms</p>}
+            {databaseInfo.message && <p>Error: {databaseInfo.message}</p>}
+            {databaseInfo.lastTest && <p>Last Test: {databaseInfo.lastTest}</p>}
+          </div>
+        ) : (
+          <p>Loading database info...</p>
+        )}
+      </div>
+      
       {/* Debug info - remove in production */}
       <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">
         <h3 className="font-bold mb-2">Debug Info:</h3>
@@ -391,10 +482,10 @@ export default function Home() {
         <p>Messages Count: {messages.length}</p>
         <p>Username: {username}</p>
         <p>Is Client: {isClient ? 'Yes' : 'No'}</p>
-        <p>Last Message Time: {new Date(lastMessageTime).toLocaleTimeString()}</p>
+        <p>Last Message Time: {lastMessageTime ? new Date(lastMessageTime).toLocaleTimeString() : 'Never'}</p>
         <p>Cooldown Time: {cooldownTime}s</p>
         {error && <p className="text-red-500">Error: {error}</p>}
       </div>
     </div>
   );
-      }
+          }
