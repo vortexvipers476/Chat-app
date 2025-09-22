@@ -1,4 +1,4 @@
-// pages/index.js
+
 import { useState, useEffect, useRef } from 'react';
 import { database } from '../lib/firebase';
 import { ref, push, onValue, serverTimestamp, set, remove, get } from 'firebase/database';
@@ -18,18 +18,16 @@ export default function Home() {
   const messagesEndRef = useRef(null);
 
   const [alert, setAlert] = useState({ type: '', message: '' });
-  const [confirmData, setConfirmData] = useState(null); // { message, onConfirm }
+  const [confirmData, setConfirmData] = useState(null);
 
   const MAX_MESSAGE_LENGTH = 70;
   const VIRTEX_LENGTH = 3500;
   const COOLDOWN_SECONDS = 7;
 
-  // Fungsi untuk menampilkan alert custom
   const showAlert = (type, message) => {
     setAlert({ type, message });
   };
 
-  // Fungsi untuk menampilkan konfirmasi custom
   const showConfirm = (message, onConfirm) => {
     setConfirmData({ message, onConfirm });
   };
@@ -228,7 +226,6 @@ export default function Home() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Ganti confirm dengan modal custom
   const clearMessages = () => {
     showConfirm('Are you sure you want to clear all messages?', () => {
       const messagesRef = ref(database, 'messages');
@@ -327,7 +324,6 @@ export default function Home() {
     });
   };
 
-  // Modal konfirmasi custom
   const ConfirmModal = () => {
     if (!confirmData) return null;
     return (
@@ -355,17 +351,17 @@ export default function Home() {
 
   return (
     <div className="max-w-3xl mx-auto font-sans px-4 py-6">
-      {/* Custom Alert */}
+      {}
       <CustomAlert
         type={alert.type}
         message={alert.message}
         onClose={() => setAlert({ type: '', message: '' })}
       />
 
-      {/* Confirm Modal */}
+      {}
       <ConfirmModal />
 
-      {/* Header */}
+      {}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-lg overflow-hidden mb-6">
         <div className="p-5 flex justify-between items-center">
           <h1 className="text-3xl font-extrabold tracking-wide">Realtime Chat</h1>
@@ -390,7 +386,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Username input */}
+      {}
       <div className="mb-4">
         <label className="block mb-1 text-gray-700 dark:text-gray-300 font-semibold">Username:</label>
         <input
@@ -402,7 +398,7 @@ export default function Home() {
         />
       </div>
 
-      {/* Messages container */}
+      {}
       <div className="h-96 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg shadow-inner mb-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8 select-none">
@@ -463,7 +459,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Message input form */}
+      {}
       <form onSubmit={handleSendMessage} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
         <div className="mb-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
           <div>
@@ -497,7 +493,7 @@ export default function Home() {
         </div>
       </form>
 
-      {/* Database Info */}
+      {}
       <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm shadow-inner">
         <h3 className="font-bold mb-2">Database Info</h3>
         {databaseInfo ? (
@@ -519,7 +515,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Debug Info */}
+      {}
       <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm shadow-inner">
         <h3 className="font-bold mb-2">Debug Info:</h3>
         <p>Connection Status: {connectionStatus}</p>
