@@ -19,7 +19,7 @@ export default function Home() {
   
   // Constants for message limits
   const MAX_MESSAGE_LENGTH = 200;
-  const COOLDOWN_SECONDS = 2; // 2 seconds cooldown between messages
+  const COOLDOWN_SECONDS = 7; // 2 seconds cooldown between messages
   const SPAM_THRESHOLD = 3; // Number of spam attempts before temporary mute
   const SPAM_PENALTY_SECONDS = 10; // Temporary mute duration in seconds
   const USERNAME_MIN_LENGTH = 4; // Minimum username length
