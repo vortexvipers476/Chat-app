@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { database } from '../lib/firebase';
-import { ref, push, onValue, serverTimestamp } from 'firebase/database';
+import { ref, push, onValue, serverTimestamp, set } from 'firebase/database';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [username, setUsername] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Set isClient to true when component mounts on client
@@ -39,23 +41,57 @@ export default function Home() {
     // Only run on client side
     if (!isClient) return;
 
+    // Check connection status
+    const connectedRef = ref(database, '.info/connected');
+    const unsubscribeConnected = onValue(connectedRef, (snapshot) => {
+      const connected = snapshot.val();
+      setConnectionStatus(connected ? 'connected' : 'disconnected');
+      console.log("Firebase connection status:", connected ? "Connected" : "Disconnected");
+    });
+
+    // Create a test connection to verify database access
+    const testRef = ref(database, '.info/serverTimeOffset');
+    const unsubscribeTest = onValue(testRef, (snapshot) => {
+      console.log("Database connection test successful");
+    }, (error) => {
+      console.error("Database connection test failed:", error);
+      setError(`Database connection error: ${error.message}`);
+    });
+
     // Fetch messages from Firebase
     const messagesRef = ref(database, 'messages');
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
+    const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
+      console.log("Firebase data received:", data);
+      
       if (data) {
-        const messageList = Object.values(data).sort((a, b) => 
-          new Date(a.timestamp) - new Date(b.timestamp)
-        );
+        // Convert object to array and sort by timestamp
+        const messageList = Object.entries(data).map(([key, value]) => ({
+          id: key,
+          ...value
+        })).sort((a, b) => {
+          // Handle server timestamp
+          const timeA = a.timestamp || 0;
+          const timeB = b.timestamp || 0;
+          return timeA - timeB;
+        });
+        
         setMessages(messageList);
+        console.log("Messages updated:", messageList);
       } else {
         setMessages([]);
+        console.log("No messages found");
       }
+    }, (error) => {
+      console.error("Error fetching messages:", error);
+      setError(`Error fetching messages: ${error.message}`);
     });
 
     return () => {
-      // Cleanup subscription
-      unsubscribe();
+      // Cleanup subscriptions
+      unsubscribeConnected();
+      unsubscribeTest();
+      unsubscribeMessages();
     };
   }, [isClient]);
 
@@ -63,14 +99,29 @@ export default function Home() {
     e.preventDefault();
     if (newMessage.trim() === '' || username.trim() === '') return;
 
-    const messagesRef = ref(database, 'messages');
-    push(messagesRef, {
+    console.log("Sending message:", {
       username: username,
       text: newMessage,
       timestamp: serverTimestamp()
     });
 
-    setNewMessage('');
+    const messagesRef = ref(database, 'messages');
+    
+    // Create a unique key for the message
+    const newMessageRef = push(messagesRef);
+    
+    // Set the message data
+    set(newMessageRef, {
+      username: username,
+      text: newMessage,
+      timestamp: serverTimestamp()
+    }).then(() => {
+      console.log("Message sent successfully");
+      setNewMessage('');
+    }).catch(error => {
+      console.error("Error sending message:", error);
+      setError(`Error sending message: ${error.message}`);
+    });
   };
 
   const handleUsernameChange = (e) => {
@@ -87,12 +138,39 @@ export default function Home() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const clearMessages = () => {
+    if (confirm('Are you sure you want to clear all messages?')) {
+      const messagesRef = ref(database, 'messages');
+      set(messagesRef, null)
+        .then(() => console.log("Messages cleared"))
+        .catch(error => console.error("Error clearing messages:", error));
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-        <div className="p-4 bg-indigo-600 text-white">
+        <div className="p-4 bg-indigo-600 text-white flex justify-between items-center">
           <h1 className="text-2xl font-bold">Realtime Chat</h1>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center">
+              <div className={`w-3 h-3 rounded-full mr-2 ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-red-400'}`}></div>
+              <span className="text-sm">{connectionStatus}</span>
+            </div>
+            <button 
+              onClick={clearMessages}
+              className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+            >
+              Clear Messages
+            </button>
+          </div>
         </div>
+        
+        {error && (
+          <div className="p-3 bg-red-100 text-red-700">
+            Error: {error}
+          </div>
+        )}
         
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
@@ -113,9 +191,9 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message, index) => (
+              {messages.map((message) => (
                 <div 
-                  key={index} 
+                  key={message.id} 
                   className={`flex ${message.username === username ? 'justify-end' : 'justify-start'}`}
                 >
                   <div 
@@ -162,6 +240,16 @@ export default function Home() {
           </div>
         </form>
       </div>
+      
+      {/* Debug info - remove in production */}
+      <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">
+        <h3 className="font-bold mb-2">Debug Info:</h3>
+        <p>Connection Status: {connectionStatus}</p>
+        <p>Messages Count: {messages.length}</p>
+        <p>Username: {username}</p>
+        <p>Is Client: {isClient ? 'Yes' : 'No'}</p>
+        {error && <p className="text-red-500">Error: {error}</p>}
+      </div>
     </div>
   );
-                      }
+                                                        }
