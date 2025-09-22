@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { database } from '../lib/firebase';
-import { ref, push, onValue, serverTimestamp, set } from 'firebase/database';
+import { ref, push, onValue, serverTimestamp, set, remove } from 'firebase/database';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -11,11 +11,13 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [lastMessageTime, setLastMessageTime] = useState(0);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [systemNotifications, setSystemNotifications] = useState([]);
   const messagesEndRef = useRef(null);
   
   // Constants for message limits
   const MAX_MESSAGE_LENGTH = 70;
-  const COOLDOWN_SECONDS = 7; // 2 seconds cooldown between messages
+  const VIRTEX_LENGTH = 3500; // Maximum length before considered as virtex
+  const COOLDOWN_SECONDS = 7; // 7 seconds cooldown between messages
 
   // Set isClient to true when component mounts on client
   useEffect(() => {
@@ -44,6 +46,16 @@ export default function Home() {
     }
   }, [cooldownTime]);
 
+  // Auto-dismiss system notifications
+  useEffect(() => {
+    if (systemNotifications.length > 0) {
+      const timer = setTimeout(() => {
+        setSystemNotifications(prev => prev.slice(1));
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [systemNotifications]);
+
   // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,7 +63,7 @@ export default function Home() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, systemNotifications]);
 
   useEffect(() => {
     // Only run on client side
@@ -132,6 +144,12 @@ export default function Home() {
       return;
     }
     
+    // Check for virtex (very long text)
+    if (newMessage.length > VIRTEX_LENGTH) {
+      setError(`Message too long! Maximum ${VIRTEX_LENGTH} characters allowed to prevent spam.`);
+      return;
+    }
+    
     console.log("Sending message:", {
       username: username,
       text: newMessage,
@@ -190,6 +208,41 @@ export default function Home() {
     }
   };
 
+  const deleteMessage = (messageId) => {
+    if (confirm('Are you sure you want to delete this message?')) {
+      const messageRef = ref(database, `messages/${messageId}`);
+      remove(messageRef)
+        .then(() => console.log("Message deleted"))
+        .catch(error => console.error("Error deleting message:", error));
+    }
+  };
+
+  const reportVirtex = (messageId, senderUsername) => {
+    if (confirm(`Report ${senderUsername} for sending virtex?`)) {
+      // Delete the message
+      const messageRef = ref(database, `messages/${messageId}`);
+      remove(messageRef)
+        .then(() => {
+          console.log("Virtex message deleted");
+          
+          // Add system notification
+          const notification = {
+            id: Date.now(),
+            type: 'virtex',
+            message: `@${senderUsername} has been reported for sending virtex. The message has been deleted.`,
+            timestamp: serverTimestamp()
+          };
+          
+          const notificationsRef = ref(database, 'notifications');
+          push(notificationsRef, notification);
+          
+          // Add to local state for immediate display
+          setSystemNotifications(prev => [...prev, notification]);
+        })
+        .catch(error => console.error("Error deleting virtex message:", error));
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
@@ -212,6 +265,18 @@ export default function Home() {
         {error && (
           <div className="p-3 bg-red-100 text-red-700">
             {error}
+          </div>
+        )}
+        
+        {/* System Notifications */}
+        {systemNotifications.length > 0 && (
+          <div className="p-3 bg-yellow-100 text-yellow-800">
+            {systemNotifications.map(notification => (
+              <div key={notification.id} className="flex items-center">
+                <span className="font-semibold mr-2">⚠️ System:</span>
+                <span>{notification.message}</span>
+              </div>
+            ))}
           </div>
         )}
         
@@ -246,16 +311,36 @@ export default function Home() {
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-none'
                     }`}
                   >
-                    {message.username !== username && (
-                      <div className="font-semibold text-sm">{message.username}</div>
-                    )}
-                    <div>{message.text}</div>
-                    <div className={`text-xs mt-1 ${
-                      message.username === username 
-                        ? 'text-indigo-200' 
-                        : 'text-gray-500 dark:text-gray-400'
-                    }`}>
-                      {formatTime(message.timestamp)}
+                    <div className="flex justify-between items-start">
+                      {message.username !== username && (
+                        <div className="font-semibold text-sm">{message.username}</div>
+                      )}
+                      <div className={`text-xs ${
+                        message.username === username 
+                          ? 'text-indigo-200' 
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {formatTime(message.timestamp)}
+                      </div>
+                    </div>
+                    <div className="mt-1">{message.text}</div>
+                    <div className="mt-2 flex justify-end space-x-2">
+                      {message.username !== username && (
+                        <button
+                          onClick={() => reportVirtex(message.id, message.username)}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Report
+                        </button>
+                      )}
+                      {message.username === username && (
+                        <button
+                          onClick={() => deleteMessage(message.id)}
+                          className="text-xs text-gray-500 hover:text-gray-700"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -312,4 +397,4 @@ export default function Home() {
       </div>
     </div>
   );
-        }
+      }
