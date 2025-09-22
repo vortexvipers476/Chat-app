@@ -6,18 +6,13 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [username, setUsername] = useState('');
+  const [isClient, setIsClient] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom of messages
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Set isClient to true when component mounts on client
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
+    setIsClient(true);
+    
     // Get username from localStorage or prompt user
     const savedUsername = localStorage.getItem('chatUsername');
     if (savedUsername) {
@@ -29,10 +24,24 @@ export default function Home() {
         localStorage.setItem('chatUsername', name);
       }
     }
+  }, []);
+
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    // Only run on client side
+    if (!isClient) return;
 
     // Fetch messages from Firebase
     const messagesRef = ref(database, 'messages');
-    onValue(messagesRef, (snapshot) => {
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const messageList = Object.values(data).sort((a, b) => 
@@ -45,9 +54,10 @@ export default function Home() {
     });
 
     return () => {
-      // Cleanup if needed
+      // Cleanup subscription
+      unsubscribe();
     };
-  }, []);
+  }, [isClient]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -66,7 +76,9 @@ export default function Home() {
   const handleUsernameChange = (e) => {
     const newUsername = e.target.value;
     setUsername(newUsername);
-    localStorage.setItem('chatUsername', newUsername);
+    if (isClient) {
+      localStorage.setItem('chatUsername', newUsername);
+    }
   };
 
   const formatTime = (timestamp) => {
@@ -152,4 +164,4 @@ export default function Home() {
       </div>
     </div>
   );
-      }
+                      }
