@@ -15,17 +15,14 @@ export default function Home() {
   const [databaseInfo, setDatabaseInfo] = useState(null);
   const messagesEndRef = useRef(null);
   
-  // Constants for message limits
   const MAX_MESSAGE_LENGTH = 70;
-  const VIRTEX_LENGTH = 3500; // Maximum length before considered as virtex
-  const COOLDOWN_SECONDS = 7; // 7 seconds cooldown between messages
+  const VIRTEX_LENGTH = 3500;
+  const COOLDOWN_SECONDS = 7;
 
-  // Set isClient to true when component mounts on client
   useEffect(() => {
     setIsClient(true);
     console.log("Component mounted on client side");
     
-    // Get username from localStorage or prompt user
     const savedUsername = localStorage.getItem('chatUsername');
     if (savedUsername) {
       setUsername(savedUsername);
@@ -40,13 +37,11 @@ export default function Home() {
     }
   }, []);
 
-  // Test database connection
-  useEffect(() => {
+    useEffect(() => {
     if (!isClient) return;
     
     console.log("Testing database connection...");
     
-    // Test database connection by trying to read server time offset
     const testRef = ref(database, '.info/serverTimeOffset');
     
     get(testRef).then((snapshot) => {
@@ -72,7 +67,6 @@ export default function Home() {
     });
   }, [isClient, database]);
 
-  // Update cooldown timer
   useEffect(() => {
     if (cooldownTime > 0) {
       const timer = setTimeout(() => {
@@ -82,7 +76,6 @@ export default function Home() {
     }
   }, [cooldownTime]);
 
-  // Auto-dismiss system notifications
   useEffect(() => {
     if (systemNotifications.length > 0) {
       const timer = setTimeout(() => {
@@ -92,7 +85,6 @@ export default function Home() {
     }
   }, [systemNotifications]);
 
-  // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -102,12 +94,10 @@ export default function Home() {
   }, [messages, systemNotifications]);
 
   useEffect(() => {
-    // Only run on client side
     if (!isClient) return;
 
     console.log("Setting up Firebase listeners...");
     
-    // Check connection status
     const connectedRef = ref(database, '.info/connected');
     const unsubscribeConnected = onValue(connectedRef, (snapshot) => {
       const connected = snapshot.val();
@@ -115,7 +105,6 @@ export default function Home() {
       console.log("Firebase connection status changed:", connected ? "Connected" : "Disconnected");
     });
 
-    // Fetch messages from Firebase
     const messagesRef = ref(database, 'messages');
     const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
       console.log("Messages data received from Firebase");
@@ -124,12 +113,10 @@ export default function Home() {
         const data = snapshot.val();
         console.log("Messages data:", data);
         
-        // Convert object to array and sort by timestamp
         const messageList = Object.entries(data).map(([key, value]) => ({
           id: key,
           ...value
         })).sort((a, b) => {
-          // Handle server timestamp
           const timeA = a.timestamp || 0;
           const timeB = b.timestamp || 0;
           return timeA - timeB;
@@ -147,7 +134,6 @@ export default function Home() {
     });
 
     return () => {
-      // Cleanup subscriptions
       console.log("Cleaning up Firebase listeners");
       unsubscribeConnected();
       unsubscribeMessages();
@@ -157,28 +143,24 @@ export default function Home() {
   const handleSendMessage = (e) => {
     e.preventDefault();
     
-    // Check if message is empty
     if (newMessage.trim() === '' || username.trim() === '') {
       console.log("Empty message or username");
       return;
     }
     
-    // Check if message is too long
     if (newMessage.length > MAX_MESSAGE_LENGTH) {
       setError(`Message is too long! Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
       return;
     }
     
-    // Check cooldown
     const now = Date.now();
-    const timeSinceLastMessage = (now - lastMessageTime) / 1000; // in seconds
+    const timeSinceLastMessage = (now - lastMessageTime) / 1000;
     
     if (timeSinceLastMessage < COOLDOWN_SECONDS) {
       setError(`Please wait ${Math.ceil(COOLDOWN_SECONDS - timeSinceLastMessage)} seconds before sending another message.`);
       return;
     }
     
-    // Check for virtex (very long text)
     if (newMessage.length > VIRTEX_LENGTH) {
       setError(`Message too long! Maximum ${VIRTEX_LENGTH} characters allowed to prevent spam.`);
       return;
@@ -192,10 +174,8 @@ export default function Home() {
 
     const messagesRef = ref(database, 'messages');
     
-    // Create a unique key for the message
     const newMessageRef = push(messagesRef);
     
-    // Set the message data
     set(newMessageRef, {
       username: username,
       text: newMessage,
@@ -253,13 +233,11 @@ export default function Home() {
 
   const reportVirtex = (messageId, senderUsername) => {
     if (confirm(`Report ${senderUsername} for sending virtex?`)) {
-      // Delete the message
       const messageRef = ref(database, `messages/${messageId}`);
       remove(messageRef)
         .then(() => {
           console.log("Virtex message deleted");
           
-          // Add system notification
           const notification = {
             id: Date.now(),
             type: 'virtex',
@@ -270,7 +248,6 @@ export default function Home() {
           const notificationsRef = ref(database, 'notifications');
           push(notificationsRef, notification);
           
-          // Add to local state for immediate display
           setSystemNotifications(prev => [...prev, notification]);
         })
         .catch(error => console.error("Error deleting virtex message:", error));
@@ -281,7 +258,6 @@ export default function Home() {
     console.log("Manual connection test initiated");
     setConnectionStatus('connecting');
     
-    // Test database connection by trying to read server time offset
     const testRef = ref(database, '.info/serverTimeOffset');
     
     get(testRef).then((snapshot) => {
@@ -344,7 +320,7 @@ export default function Home() {
           </div>
         )}
         
-        {/* System Notifications */}
+        {}
         {systemNotifications.length > 0 && (
           <div className="p-3 bg-yellow-100 text-yellow-800">
             {systemNotifications.map(notification => (
@@ -460,7 +436,7 @@ export default function Home() {
         </form>
       </div>
       
-      {/* Database Info */}
+      {}
       <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">
         <h3 className="font-bold mb-2">Database Info</h3>
         {databaseInfo ? (
@@ -475,7 +451,7 @@ export default function Home() {
         )}
       </div>
       
-      {/* Debug info - remove in production */}
+      {}
       <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">
         <h3 className="font-bold mb-2">Debug Info:</h3>
         <p>Connection Status: {connectionStatus}</p>
@@ -489,3 +465,4 @@ export default function Home() {
     </div>
   );
           }
+          
