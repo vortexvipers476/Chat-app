@@ -9,7 +9,13 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [error, setError] = useState(null);
+  const [lastMessageTime, setLastMessageTime] = useState(0);
+  const [cooldownTime, setCooldownTime] = useState(0);
   const messagesEndRef = useRef(null);
+  
+  // Constants for message limits
+  const MAX_MESSAGE_LENGTH = 200;
+  const COOLDOWN_SECONDS = 2; // 2 seconds cooldown between messages
 
   // Set isClient to true when component mounts on client
   useEffect(() => {
@@ -27,6 +33,16 @@ export default function Home() {
       }
     }
   }, []);
+
+  // Update cooldown timer
+  useEffect(() => {
+    if (cooldownTime > 0) {
+      const timer = setTimeout(() => {
+        setCooldownTime(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownTime]);
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -97,8 +113,25 @@ export default function Home() {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+    
+    // Check if message is empty
     if (newMessage.trim() === '' || username.trim() === '') return;
-
+    
+    // Check if message is too long
+    if (newMessage.length > MAX_MESSAGE_LENGTH) {
+      setError(`Message is too long! Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
+      return;
+    }
+    
+    // Check cooldown
+    const now = Date.now();
+    const timeSinceLastMessage = (now - lastMessageTime) / 1000; // in seconds
+    
+    if (timeSinceLastMessage < COOLDOWN_SECONDS) {
+      setError(`Please wait ${Math.ceil(COOLDOWN_SECONDS - timeSinceLastMessage)} seconds before sending another message.`);
+      return;
+    }
+    
     console.log("Sending message:", {
       username: username,
       text: newMessage,
@@ -118,6 +151,9 @@ export default function Home() {
     }).then(() => {
       console.log("Message sent successfully");
       setNewMessage('');
+      setLastMessageTime(now);
+      setCooldownTime(COOLDOWN_SECONDS);
+      setError(null);
     }).catch(error => {
       console.error("Error sending message:", error);
       setError(`Error sending message: ${error.message}`);
@@ -129,6 +165,13 @@ export default function Home() {
     setUsername(newUsername);
     if (isClient) {
       localStorage.setItem('chatUsername', newUsername);
+    }
+  };
+
+  const handleMessageChange = (e) => {
+    const text = e.target.value;
+    if (text.length <= MAX_MESSAGE_LENGTH) {
+      setNewMessage(text);
     }
   };
 
@@ -168,7 +211,7 @@ export default function Home() {
         
         {error && (
           <div className="p-3 bg-red-100 text-red-700">
-            Error: {error}
+            {error}
           </div>
         )}
         
@@ -223,17 +266,32 @@ export default function Home() {
         </div>
         
         <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-gray-800">
+          <div className="mb-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
+            <div>
+              Characters: {newMessage.length}/{MAX_MESSAGE_LENGTH}
+            </div>
+            {cooldownTime > 0 && (
+              <div className="text-orange-500">
+                Please wait {cooldownTime}s before sending another message
+              </div>
+            )}
+          </div>
           <div className="flex">
-            <input
-              type="text"
+            <textarea
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleMessageChange}
               placeholder="Type a message..."
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              rows={2}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-r-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              disabled={cooldownTime > 0 || newMessage.trim() === ''}
+              className={`px-4 py-2 rounded-r-lg ${
+                cooldownTime > 0 || newMessage.trim() === ''
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+              } text-white`}
             >
               Send
             </button>
@@ -248,8 +306,10 @@ export default function Home() {
         <p>Messages Count: {messages.length}</p>
         <p>Username: {username}</p>
         <p>Is Client: {isClient ? 'Yes' : 'No'}</p>
+        <p>Last Message Time: {new Date(lastMessageTime).toLocaleTimeString()}</p>
+        <p>Cooldown Time: {cooldownTime}s</p>
         {error && <p className="text-red-500">Error: {error}</p>}
       </div>
     </div>
   );
-                                                        }
+               }
